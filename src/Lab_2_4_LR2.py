@@ -156,15 +156,17 @@ def evaluate_regression(y_true, y_pred):
 
     # R^2 Score
     # TODO
-    r_squared = None
+    rss = np.sum((y_true-y_pred)**2)
+    tss = np.sum((y_true-np.mean(y_true))**2)
+    r_squared = 1-(rss/tss)
 
     # Root Mean Squared Error
     # TODO
-    rmse = None
+    rmse = np.sqrt(np.mean((y_pred-y_true)**2))
 
     # Mean Absolute Error
     # TODO
-    mae = None
+    mae = (1/len(y_true))*np.sum(np.abs(y_true-y_pred))
 
     return {"R2": r_squared, "RMSE": rmse, "MAE": mae}
 
