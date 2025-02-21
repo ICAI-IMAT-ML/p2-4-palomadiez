@@ -67,8 +67,11 @@ class LinearRegressor:
         # Replace this code with the code you did in the previous laboratory session
 
         # Store the intercept and the coefficients of the model
-        self.intercept = None
-        self.coefficients = None
+        ones = np.ones((X.shape[0], 1))
+        X = np.hstack([ones, X])
+        w = np.dot(np.linalg.inv((np.dot(np.transpose(X),X))), np.dot(np.transpose(X), y))
+        self.intercept = w[0]
+        self.coefficients = w[1:]
 
     def fit_gradient_descent(self, X, y, learning_rate=0.01, iterations=1000):
         """
@@ -93,17 +96,18 @@ class LinearRegressor:
 
         # Implement gradient descent (TODO)
         for epoch in range(iterations):
-            predictions = None
+            predictions = X[:,1:]@self.coefficients+self.intercept
             error = predictions - y
 
             # TODO: Write the gradient values and the updates for the paramenters
-            gradient = None
-            self.intercept -= None
-            self.coefficients -= None
+            gradient_weights = np.transpose(X[:,1:])@error
+            gradient_intercept = np.sum(error)
+            self.intercept -= learning_rate*gradient_intercept
+            self.coefficients -= learning_rate*gradient_weights
 
             # TODO: Calculate and print the loss every 10 epochs
             if epoch % 1000 == 0:
-                mse = None
+                mse = np.mean(error**2)
                 print(f"Epoch {epoch}: MSE = {mse}")
 
     def predict(self, X):
@@ -126,8 +130,17 @@ class LinearRegressor:
         if self.coefficients is None or self.intercept is None:
             raise ValueError("Model is not yet fitted")
 
-        return None
+        if np.ndim(X) == 1:
+            # TODO: Predict when X is only one variable
+            predictions = self.intercept + self.coefficients*X
+        else:
+            # TODO: Predict when X is more than one variable
+            ones = np.ones((X.shape[0], 1))
+            X = np.hstack([ones, X])
+            w = np.hstack([self.intercept, self.coefficients])
+            predictions = np.dot(X,w) 
 
+        return predictions
 
 def evaluate_regression(y_true, y_pred):
     """
