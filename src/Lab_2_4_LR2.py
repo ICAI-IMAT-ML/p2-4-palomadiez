@@ -67,11 +67,16 @@ class LinearRegressor:
         # Replace this code with the code you did in the previous laboratory session
 
         # Store the intercept and the coefficients of the model
-        ones = np.ones((X.shape[0], 1))
-        X = np.hstack([ones, X])
-        w = np.dot(np.linalg.inv((np.dot(np.transpose(X),X))), np.dot(np.transpose(X), y))
-        self.intercept = w[0]
-        self.coefficients = w[1:]
+        X_transpose = np.transpose(X)
+        X_transpose_dot_X = X_transpose.dot(X)
+        inverse_X_transpose_dot_X = np.linalg.inv(X_transpose_dot_X)
+        X_transpose_dot_y = X_transpose.dot(y)
+
+        coefficients = inverse_X_transpose_dot_X.dot(X_transpose_dot_y)
+        
+        # Store the intercept and the coefficients of the model
+        self.intercept = coefficients[0]
+        self.coefficients = coefficients[1:]
 
     def fit_gradient_descent(self, X, y, learning_rate=0.01, iterations=1000):
         """
@@ -89,26 +94,88 @@ class LinearRegressor:
 
         # Initialize the parameters to very small values (close to 0)
         m = len(y)
-        self.coefficients = (
-            np.random.rand(X.shape[1] - 1) * 0.01
-        )  # Small random numbers
+        self.coefficients = np.random.rand(X.shape[1] - 1) * 0.01  # Small random numbers
         self.intercept = np.random.rand() * 0.01
+        epochs = []
+        mses = []
+        w = []
+        b = []
+        w_recta = []
+        b_recta = []
 
         # Implement gradient descent (TODO)
         for epoch in range(iterations):
-            predictions = X[:,1:]@self.coefficients+self.intercept
+            predictions = X[:,1:]@self.coefficients + self.intercept
             error = predictions - y
-
+            
             # TODO: Write the gradient values and the updates for the paramenters
-            gradient_weights = np.transpose(X[:,1:])@error
-            gradient_intercept = np.sum(error)
+            gradient_coefficients = (1/m)*np.transpose(X[:,1:])@error
+            gradient_intercept = (1/m)*np.sum(error) 
             self.intercept -= learning_rate*gradient_intercept
-            self.coefficients -= learning_rate*gradient_weights
+            self.coefficients -= learning_rate*gradient_coefficients
 
             # TODO: Calculate and print the loss every 10 epochs
-            if epoch % 1000 == 0:
+            if epoch % 10 == 0:
                 mse = np.mean(error**2)
+                epochs.append(epoch)
+                mses.append(mse)
                 print(f"Epoch {epoch}: MSE = {mse}")
+
+                if len(self.coefficients) == 1:
+                    w.append(self.coefficients[0])
+                    b.append(self.intercept)
+
+                    if epoch % 100 == 0:
+                        w_recta.append(self.coefficients[0])
+                        b_recta.append(self.intercept)
+
+
+        if len(self.coefficients) == 1:
+            # Plot the predicted values with the real values every 100 steps
+            plt.figure(figsize = (20,  10))
+            plt.scatter(X[:, 1:], y, marker='o', color="purple")
+            x_linspace = np.linspace(np.min(X[:, 1:]), np.max(X[:, 1:]), 100)
+            for i in range(len(w_recta)):
+                plt.plot(x_linspace, w_recta[i]*x_linspace+b_recta[i], label = f"predictions step {i*100}")
+                
+            plt.title("Fitting process")
+            plt.xlabel("X true")
+            plt.ylabel("Y true")
+            plt.legend()
+            plt.show()
+
+            # Plot w and b values as well as the level curves from the mse
+            def mse_function(w0, w1, X, y):  # Definir función del MSE
+                y_pred = w0 + w1 * X
+                mse = np.mean((y_pred - y) ** 2)
+                return mse
+
+            w0_range = np.linspace(-2, 4, 100)  # Definir rangos de parámetros
+            w1_range = np.linspace(-1, 2, 100)
+
+            W0, W1 = np.meshgrid(w0_range, w1_range)  # Crear una malla de puntos para los parámetros
+            Z = np.zeros_like(W0)  # Calcular el MSE para cada combinación de parámetros
+            X = X[:,1:]
+            for i in range(W0.shape[0]):
+                for j in range(W0.shape[1]):
+                    Z[i, j] = mse_function(W0[i, j], W1[i, j], X[:, 0], y)
+
+            plt.figure(figsize = (10,5))
+            plt.contour(W0, W1, Z, levels=30, cmap='viridis')  # Pintar curvas de nivel con contour
+            plt.scatter(w, b, marker="x", color="red")  # Pintar w y b
+            plt.legend()
+            plt.title("Weight and Bias")
+            plt.xlabel("Weight")
+            plt.ylabel("Bias")
+            plt.show()
+
+        plt.figure(figsize=(9,4))
+        plt.plot(epochs, mses, color="magenta")
+        plt.scatter(epochs, mses, color="black", s=30, marker=".")
+        plt.ylabel("Loss function (MSE)")
+        plt.xlabel("Epoch")
+        plt.title("Progress of the Loss Function")
+
 
     def predict(self, X):
         """
@@ -169,7 +236,6 @@ def evaluate_regression(y_true, y_pred):
     mae = (1/len(y_true))*np.sum(np.abs(y_true-y_pred))
 
     return {"R2": r_squared, "RMSE": rmse, "MAE": mae}
-
 
 def one_hot_encode(X, categorical_indices, drop_first=False):
     """
